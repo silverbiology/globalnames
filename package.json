@@ -1,0 +1,46 @@
+{
+    "name" : "globalnames",
+    "version" : "0.1.0",
+    "description" : "Node Library for interacting with the Global Names Architecture API.",
+	"homepage" : "https://github.com/silverbiology/globalnames",
+    "main" : "./index.js",
+    "directories" : {
+        "lib" : ".",
+        "test" : "test",
+        "example" : "example"
+    },
+    "repository" : {
+        "type" : "git",
+        "url" : "http://github.com/silverbiology/globalnames.git"
+    },
+    "keywords" : [
+        "ocr",
+        "darwincore",
+		"darwin core",
+        "globalnames",
+		"global names",
+		"gna",
+		"gnrd",
+		"recognition",
+		"discovery",
+		"parser",
+        "parsing",
+        "scientific name",
+		"scientificname",
+		"name finder",
+		"global names",
+		"silverbiology"
+    ],
+    "author" : {
+        "name" : "SilverBiology",
+        "email" : "contact@silverbiology.com",
+        "url" : "http://www.silverbiology.com"
+    },
+    "license" : "",
+    "engine" : {
+        "node" : ">=0.6"
+    },
+	"dependencies": {
+		"needle": "*"
+	}
+}
