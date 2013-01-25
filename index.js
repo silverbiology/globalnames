@@ -93,10 +93,12 @@ var globalNamesNameFinder = function( parent ) {
 		var req = route + "?" + type + "=" + input;
 		parent.needle.get(req, function(error, response, body){
 			counter = 0;
-			if(response.statusCode == 303 && 'undefined' != typeof response.headers.location) {
-				pollingFunction(response.headers.location,function(){
-					if(callback) return callback(me.names);
-				});
+			if(response) {
+				if(response.statusCode == 303 && 'undefined' != typeof response.headers.location) {
+					pollingFunction(response.headers.location,function(){
+						if(callback) return callback(me.names);
+					});
+				}
 			}
 		}
 		, this);	
