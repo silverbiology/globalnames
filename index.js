@@ -1,4 +1,3 @@
-
 var globalnames = function( ocrTxt ) {
 
 	this.needle = require('needle');
@@ -21,7 +20,7 @@ var globalnames = function( ocrTxt ) {
 
 	this.findNames = function(callback) {
 		me.nameFinder.findNames(function(results) {
-			if(callback) return callback(results);
+			if (callback) callback(results);
 		});
 	}
 
@@ -29,9 +28,9 @@ var globalnames = function( ocrTxt ) {
 		return me.nameFinder.getNames();
 	}
 
-	this.resolveName = function(name,callback) {
-		me.resolver.resolveName(name,function(results) {
-			if(callback) return callback(results);
+	this.resolveName = function(name, callback) {
+		me.resolver.resolveName(name, function(results) {
+			if (callback) callback(results);
 		});
 	}
 
@@ -41,7 +40,7 @@ var globalnames = function( ocrTxt ) {
 
 	this.searchNames = function(name,searchFormat,page, perpage,callback) {
 		me.nameSearch.searchNames(name,searchFormat,page, perpage,function(results) {
-			if(callback) return callback(results);
+			if (callback) return callback(results);
 		});
 	}
 
@@ -51,13 +50,13 @@ var globalnames = function( ocrTxt ) {
 	
 	this.parseNames = function(name,callback) {
 		me.nameSearch.parseNames(name,function(results) {
-			if(callback) return callback(results);
+			if (callback) return callback(results);
 		});
 	}
 	
 	this.nameDetails = function(id,callback) {
 		me.nameSearch.nameDetails(id,function(results) {
-			if(callback) return callback(results);
+			if (callback) return callback(results);
 		});
 	}
 	
@@ -70,20 +69,26 @@ var globalNamesNameFinder = function( parent ) {
 	
 	var route = "http://gnrd.globalnames.org/name_finder.json";
 	var me = this;
-	var counter = 0;
-	this.names = null;
-
-	var pollingFunction = function(url,callback) {
-		counter++;
-		setTimeout(function() {}, 1000);
-		if(counter > 30) return callback();
-		parent.needle.get(url, function(error, response, body){
-			if (body && body.status == 200) {
-				me.names = body.names;
-				return callback();
-			} else {
-				pollingFunction(url,callback);
-			}
+	this.async = require('async');
+	
+	var pollingFunction = function(url, callback) {
+		var i = 0;
+		var names = null;
+		me.async.doUntil(function(cb) {
+			parent.needle.get(url, function(error, response, body) {
+				if (body && body.status == 200) {
+					names = body.names;
+					i = 99999;
+					cb();
+				} else {
+					i++;
+					setTimeout(cb, 2000);
+				}
+			});
+		}, function() {
+			return (i > 20);
+		}, function() {
+			callback(names);
 		});
 	}
 	
@@ -92,16 +97,20 @@ var globalNamesNameFinder = function( parent ) {
 		var type = "text";
 		var req = route + "?" + type + "=" + input;
 		parent.needle.get(req, function(error, response, body){
-			counter = 0;
-			if(response) {
-				if(response.statusCode == 303 && 'undefined' != typeof response.headers.location) {
-					pollingFunction(response.headers.location,function(){
-						if(callback) return callback(me.names);
+			if (response) {
+				if (response.statusCode == 303 && 'undefined' != typeof response.headers.location) {
+					pollingFunction(response.headers.location, function(names){
+						if (callback) callback(names);
 					});
+				} else {
+					console.log("??? Fix");
+					if (callback) callback(false);
 				}
+			} else {
+				console.log("??? Fix");
+				if (callback) callback(false);
 			}
-		}
-		, this);	
+		}, this);	
 	}
 
 	// Returns just an array of scientific names
@@ -110,7 +119,7 @@ var globalNamesNameFinder = function( parent ) {
 		if (this.names) {
 			// Use limit else return all
 			var cnt = limit || this.names.length;
-			for(var i=0; i<cnt; i++) {
+			for (var i=0; i<cnt; i++) {
 				tmpList.push( this.names[i].scientificName );
 			}
 		}
@@ -132,12 +141,18 @@ var globalNamesResolver = function( parent ) {
 		var type = "names";
 		var req = route + "?" + type + "=" + input;
 		// console.log(req);
-		parent.needle.get(req, function(error, response, body){
-			if(body.status == 'success') {
-				me.names = body.data[0].results;
-				return callback(me.names);
+		parent.needle.get(req, function(error, response, body) {
+			console.log("Finish Resolve", error, body.data);
+			if (body && body.status == 'success') {
+				if (typeof body.data == 'undefined' || typeof body.data[0].results == 'undefined') {
+					callback(false);
+				} else {
+					me.names = body.data[0].results;
+					callback(me.names);
+				}
+			} else {
+				callback(false);
 			}
-			// console.log(body);
 		}
 		, this);	
 	}
@@ -147,7 +162,7 @@ var globalNamesResolver = function( parent ) {
 		if (this.names) {
 			// Use limit else return all
 			var cnt = limit || this.names.length;
-			for(var i=0; i<cnt; i++) {
+			for (var i=0; i<cnt; i++) {
 				tmpList.push( this.names[i].canonical_form );
 			}
 		}
@@ -184,10 +199,9 @@ var globalNamesNameSearch = function( parent ) {
 		}
 		var type = "search_term";
 		var req = route + "?" + type + "=" + input + "&per_page=" + perpage + "&page=" + page;
-// console.log(req);
 		parent.needle.get(req, function(error, response, body){
 			me.names = body;
-			return callback(me.names);
+			callback(me.names);
 		}
 		, this);	
 	}
@@ -197,7 +211,7 @@ var globalNamesNameSearch = function( parent ) {
 		if (this.names.name_strings) {
 			// Use limit else return all
 			var cnt = limit || this.names.name_strings.length;
-			for(var i=0; i<cnt; i++) {
+			for (var i=0; i<cnt; i++) {
 				tmpList.push( this.names.name_strings[i].name );
 			}
 		}
@@ -211,26 +225,25 @@ var globalNamesNameSearch = function( parent ) {
 		
 		parent.needle.get(req, function(error, response, body){
 			me.parsedNames = body;
-			return callback(me.parsedNames);
+			callback(me.parsedNames);
 		}
 		, this);	
 	}
 	
 	this.nameDetails = function( id, callback ) {
-		if(id) {
+		if (id) {
 			var input = id;
 			var req = nameRoute + input + ".json?all_records=false";
 			
 			parent.needle.get(req, function(error, response, body){
 				me.nameDetails = body;
-				return callback(me.nameDetails);
+				callback(me.nameDetails);
 			}
 			, this);	
 		} else {
-			return callback(false);
+			callback(false);
 		}
 	}
 }
-
 
 module.exports = globalnames;
